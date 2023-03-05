@@ -9,6 +9,15 @@ namespace path_tracker {
         , watchdog_twist_zero_pub_timer_(
           this->create_wall_timer(std::chrono::duration(std::chrono::milliseconds(100)),
                                   std::bind(&PathTracker::WatchDogTwistZeroPubCb, this)))
+        , status_pub_(
+          this->create_publisher<std_msgs::msg::Int32>("~/tracker_status", 10))
+        , status_pub_timer_(
+          this->create_wall_timer(std::chrono::duration(std::chrono::milliseconds(100)),
+                                  std::bind(&PathTracker::statusPubCb, this)))
+        , status_event_sub_(this->create_subscription<std_msgs::msg::Int32>(
+          "tracker_command",
+          10,
+          std::bind(&PathTracker::statusEventCb, this, std::placeholders::_1)))
     {
     }
 
@@ -20,12 +29,15 @@ namespace path_tracker {
 
     void PathTracker::pathCb(const nav_msgs::msg::Path::SharedPtr msg)
     {
-        if((*msg).header.stamp != current_target_path_.header.stamp)
-        {
+        if ((*msg).header.stamp != current_target_path_.header.stamp) {
             current_target_path_ = *msg;
-            if(current_target_path_.poses.size())
-            {
-                target_pose_ = current_target_path_.poses.at(0).pose;
+            if (current_target_path_.poses.size()) {
+                while (current_path_queue_.size()) {
+                    current_path_queue_.pop();
+                }
+                for (const auto& pose : msg->poses) {
+                    current_path_queue_.push(pose.pose);
+                }
             }
         }
     }
@@ -35,6 +47,10 @@ namespace path_tracker {
         if (odom_last_stamped_ - this->now().nanoseconds() >= watchdog_timeout_ns_) {
             twist_pub_->publish(geometry_msgs::msg::Twist());
             RCLCPP_WARN_STREAM(this->get_logger(), "No odom feedback!");
+            tracker_status_ = TrackerStatus::ERRORED;
+        }
+        else {
+            tracker_status_ = TrackerStatus::IDLE;
         }
     }
 
@@ -42,10 +58,11 @@ namespace path_tracker {
     {
         geometry_msgs::msg::Twist computed_twist_msg;
 
-        auto current_rpy = computeYawFromQuaternion(current_pose);
         if (isTargetReached(current_pose, target_pose_)) {
-            // target_pose_ = current_target_path_.
+            updateNextPose();
         }
+
+        auto current_rpy = computeYawFromQuaternion(current_pose);
         double x_error = target_pose_.position.x - current_pose.position.x;
         double y_error = target_pose_.position.y - current_pose.position.y;
         double yaw_error = current_rpy.at(2);
@@ -53,6 +70,7 @@ namespace path_tracker {
         computed_twist_msg.linear.x = x_error * tracker_param_.linear_x_P;
         computed_twist_msg.linear.y = y_error * tracker_param_.linear_y_P;
         computed_twist_msg.angular.z = yaw_error * tracker_param_.angular_z_P;
+
         clampTwist(computed_twist_msg);
     }
 
@@ -90,6 +108,45 @@ namespace path_tracker {
             return false;
         }
         return true;
+    }
+
+    void PathTracker::updateNextPose()
+    {
+        current_path_queue_.pop();
+        if (current_path_queue_.size() && tracker_status_ == TrackerStatus::RUNNING) {
+            target_pose_ = current_path_queue_.front();
+        }
+        else {
+            tracker_status_ = TrackerStatus::COMPLETED;
+        }
+    }
+
+    void PathTracker::statusPubCb()
+    {
+        std_msgs::msg::Int32 status_msg;
+        status_msg.data = static_cast<int32_t>(tracker_status_);
+        status_pub_->publish(status_msg);
+    }
+
+    void PathTracker::statusEventCb(const std_msgs::msg::Int32::SharedPtr msg)
+    {
+        switch (static_cast<TrackerEvent>(msg->data)) {
+            case TrackerEvent::START:
+                tracker_status_ = TrackerStatus::RUNNING;
+                break;
+            case TrackerEvent::STOP:
+                tracker_status_ = TrackerStatus::STOPPED;
+                while (current_path_queue_.size()) {
+                    current_path_queue_.pop();
+                }
+                break;
+            case TrackerEvent::PAUSE:
+                tracker_status_ = TrackerStatus::PAUSED;
+                break;
+            default:
+                RCLCPP_WARN_STREAM(this->get_logger(), "INVALID EVNET");
+                break;
+        }
     }
 
     RPY_T PathTracker::computeYawFromQuaternion(const geometry_msgs::msg::Pose& msg)
