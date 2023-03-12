@@ -82,6 +82,7 @@ namespace path_tracker {
 
         void loadPath();
         void initPath();
+        void start();
         void odomCb(const nav_msgs::msg::Odometry::SharedPtr msg);
         void pathCb(const nav_msgs::msg::Path::SharedPtr msg);
         void WatchDogTwistZeroPubCb();

@@ -26,6 +26,13 @@ namespace path_tracker {
     {
         loadPath();
         // initPath();
+        start();
+    }
+
+    void PathTracker::start()
+    {
+        current_target_path_.header.frame_id = "odom";
+        tracker_status_ = TrackerStatus::RUNNING;
     }
 
     void PathTracker::loadPath()
@@ -41,16 +48,18 @@ namespace path_tracker {
         if (error.empty()) {
             for (const auto& p : loaded_points_) {
                 assert(p.size() == 3);
-                geometry_msgs::msg::Pose pose;
-                pose.position.x = p.at(0);
-                pose.position.y = p.at(1);
+                geometry_msgs::msg::PoseStamped pose;
+                pose.pose.position.x = p.at(0);
+                pose.pose.position.y = p.at(1);
                 auto q = PathMath::EulerToQuaternion({0, 0, PathMath::degToRad(p.at(2))});
-                pose.orientation.x = q.getX();
-                pose.orientation.y = q.getY();
-                pose.orientation.z = q.getZ();
-                pose.orientation.w = q.getW();
-                printPose(pose, "path_pose");
-                current_path_queue_.push(pose);
+                pose.pose.orientation.x = q.getX();
+                pose.pose.orientation.y = q.getY();
+                pose.pose.orientation.z = q.getZ();
+                pose.pose.orientation.w = q.getW();
+                printPose(pose.pose, "path_pose");
+                current_path_queue_.push(pose.pose);
+                current_target_path_.poses.push_back(pose);
+                current_target_path_.header.frame_id = "odom";
             }
         }
         else {
@@ -60,23 +69,19 @@ namespace path_tracker {
 
     void PathTracker::initPath()
     {
-        // current_target_path_ = PathGenerator::getCircularline(10, 0.6, 0.0);
+        current_target_path_ = PathGenerator::getCircularline(10, 0.6, 0.0);
         current_target_path_ = PathGenerator::getStraightline(5, 1.0, 0.0);
         for (const auto& p : current_target_path_.poses) {
             printPose(p.pose, "path_pose");
             current_path_queue_.push(p.pose);
         }
-        current_target_path_.header.frame_id = "odom";
-        path_pub_->publish(current_target_path_);
-        tracker_status_ = TrackerStatus::RUNNING;
     }
 
     void PathTracker::odomCb(const nav_msgs::msg::Odometry::SharedPtr msg)
     {
-        path_pub_->publish(current_target_path_);
-
         // RCLCPP_INFO_STREAM(this->get_logger(), "Getting odom");
         odom_last_stamped_ = msg->header.stamp.nanosec;
+        path_pub_->publish(current_target_path_);
         // if (tracker_status_ == TrackerStatus::RUNNING) {
         computeTwist(msg->pose.pose);
         // }
