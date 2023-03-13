@@ -126,7 +126,7 @@ namespace path_tracker {
         auto current_rpy = PathMath::quaternionToEulerRad(current_pose);
         double x_error = target_pose_.position.x - current_pose.position.x;
         double y_error = target_pose_.position.y - current_pose.position.y;
-        double yaw_error = current_rpy.at(2);
+        double yaw_error = PathMath::quaternionToEulerRad(target_pose_).at(2) - current_rpy.at(2);
 
         computed_twist_msg.linear.x = x_error * tracker_param_.linear_x_P;
         computed_twist_msg.linear.y = y_error * tracker_param_.linear_y_P;

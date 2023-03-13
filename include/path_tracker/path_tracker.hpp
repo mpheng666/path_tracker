@@ -35,9 +35,9 @@ namespace path_tracker {
     };
 
     struct TrackerTargetTolerance {
-        double linear_x{0.05};
-        double linear_y{0.05};
-        double angular_z{0.05};
+        double linear_x{0.1};
+        double linear_y{0.1};
+        double angular_z{0.2};
     };
 
     enum class TrackerStatus : int {
