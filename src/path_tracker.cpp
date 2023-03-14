@@ -24,8 +24,8 @@ namespace path_tracker {
           10,
           std::bind(&PathTracker::statusEventCb, this, std::placeholders::_1)))
     {
-        loadPath();
-        // initPath();
+        // loadPath();
+        initPath();
         start();
     }
 
@@ -69,8 +69,8 @@ namespace path_tracker {
 
     void PathTracker::initPath()
     {
-        current_target_path_ = PathGenerator::getCircularline(10, 0.6, 0.0);
-        current_target_path_ = PathGenerator::getStraightline(5, 1.0, 0.0);
+        // current_target_path_ = PathGenerator::getCircularline(10, 0.6, 0.0);
+        current_target_path_ = PathGenerator::getStraightline(10, 1.0, 0.0);
         for (const auto& p : current_target_path_.poses) {
             printPose(p.pose, "path_pose");
             current_path_queue_.push(p.pose);
