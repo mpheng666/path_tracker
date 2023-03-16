@@ -24,8 +24,8 @@ namespace path_tracker {
           10,
           std::bind(&PathTracker::statusEventCb, this, std::placeholders::_1)))
     {
-        // loadPath();
-        initPath();
+        loadPath();
+        // initPath();
         start();
     }
 
@@ -37,13 +37,34 @@ namespace path_tracker {
 
     void PathTracker::loadPath()
     {
-        std::string points = this->declare_parameter("waypoints", "");
+        this->declare_parameter("waypoints.path_complex");
+        this->declare_parameter("waypoints.path_forward_backward");
+        this->declare_parameter("waypoints.path_left_right");
+        this->declare_parameter("waypoints.path_s");
+        this->declare_parameter("waypoints.path_s_alternate");
+        this->declare_parameter("waypoints.path_45_deg");
+
+        std::string path_complex;
+        std::string path_forward_backward;
+        std::string path_left_right;
+        std::string path_s;
+        std::string path_s_alternate;
+        std::string path_45_deg;
+
+        this->get_parameter("waypoints.path_complex", path_complex);
+        this->get_parameter("waypoints.path_forward_backward", path_forward_backward);
+        this->get_parameter("waypoints.path_left_right", path_left_right);
+        this->get_parameter("waypoints.path_s", path_s);
+        this->get_parameter("waypoints.path_s_alternate", path_s_alternate);
+        this->get_parameter("waypoints.path_45_deg", path_45_deg);
+
+        const std::string chosen_waypoints = path_s;
+
+        RCLCPP_INFO_STREAM(this->get_logger(), "Chosen waypoints: " << chosen_waypoints);
+
         std::string error;
-
-        RCLCPP_INFO_STREAM(this->get_logger(), "waypoints: " << points);
-
-        auto loaded_points_ = ArrayParser::parseVVF(points, error);
-        RCLCPP_INFO_STREAM(this->get_logger(), "path size: " << loaded_points_.size());
+        auto loaded_points_ = ArrayParser::parseVVF(chosen_waypoints, error);
+        RCLCPP_INFO_STREAM(this->get_logger(), "Path size: " << loaded_points_.size());
 
         if (error.empty()) {
             for (const auto& p : loaded_points_) {
