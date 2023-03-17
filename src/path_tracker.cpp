@@ -43,6 +43,7 @@ namespace path_tracker {
         this->declare_parameter("waypoints.path_s");
         this->declare_parameter("waypoints.path_s_alternate");
         this->declare_parameter("waypoints.path_45_deg");
+        this->declare_parameter("waypoints.use_id");
 
         std::string path_complex;
         std::string path_forward_backward;
@@ -50,6 +51,7 @@ namespace path_tracker {
         std::string path_s;
         std::string path_s_alternate;
         std::string path_45_deg;
+        int use_id;
 
         this->get_parameter("waypoints.path_complex", path_complex);
         this->get_parameter("waypoints.path_forward_backward", path_forward_backward);
@@ -57,8 +59,19 @@ namespace path_tracker {
         this->get_parameter("waypoints.path_s", path_s);
         this->get_parameter("waypoints.path_s_alternate", path_s_alternate);
         this->get_parameter("waypoints.path_45_deg", path_45_deg);
+        this->get_parameter("waypoints.use_id", use_id);
 
-        const std::string chosen_waypoints = path_s;
+        std::vector<std::string> waypoints{{path_complex},     {path_forward_backward},
+                                           {path_left_right},  {path_s},
+                                           {path_s_alternate}, {path_45_deg}};
+
+        std::string chosen_waypoints = path_s;
+        try {
+            chosen_waypoints = waypoints.at(use_id);
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Please use the correct path id: " << e.what() << '\n';
+        }
 
         RCLCPP_INFO_STREAM(this->get_logger(), "Chosen waypoints: " << chosen_waypoints);
 
@@ -108,7 +121,7 @@ namespace path_tracker {
         // }
     }
 
-    void PathTracker::pathCb(const nav_msgs::msg::Path::SharedPtr msg)
+    void PathTracker::pathCb([[maybe_unused]] const nav_msgs::msg::Path::SharedPtr msg)
     {
         // if ((*msg).header.stamp != current_target_path_.header.stamp) {
         //     current_target_path_ = *msg;
@@ -145,15 +158,32 @@ namespace path_tracker {
         }
 
         auto current_rpy = PathMath::quaternionToEulerRad(current_pose);
+
         double x_error = target_pose_.position.x - current_pose.position.x;
         double y_error = target_pose_.position.y - current_pose.position.y;
-        double yaw_error = PathMath::quaternionToEulerRad(target_pose_).at(2) - current_rpy.at(2);
+        auto target_theta =
+        PathMath::normalizePi(PathMath::quaternionToEulerRad(target_pose_).at(2));
+        double yaw_error = target_theta - current_rpy.at(2);
+        // RCLCPP_INFO_STREAM(this->get_logger(),
+        //                    "x_error: " << x_error << " = " << target_pose_.position.x
+        //                                << " - " << current_pose.position.x);
+        // RCLCPP_INFO_STREAM(this->get_logger(),
+        //                    "y_error: " << y_error << " = " << target_pose_.position.y
+        //                                << " - " << current_pose.position.y);
+        // RCLCPP_INFO_STREAM(this->get_logger(), "yaw_error: " << yaw_error << " = "
+        //                                                      << target_theta << " - "
+        //                                                      << current_rpy.at(2));
 
-        computed_twist_msg.linear.x = x_error * tracker_param_.linear_x_P;
-        computed_twist_msg.linear.y = y_error * tracker_param_.linear_y_P;
+        if (isWithinTolerance(target_theta, current_rpy.at(2),
+                              tracker_target_tolerance_.angular_z)) {
+            computed_twist_msg.linear.x = x_error * tracker_param_.linear_x_P;
+            computed_twist_msg.linear.y = y_error * tracker_param_.linear_y_P;
+        }
         computed_twist_msg.angular.z = yaw_error * tracker_param_.angular_z_P;
 
-        clampTwist(computed_twist_msg);
+        if (!std::isnan(computed_twist_msg.angular.z)) {
+            clampTwist(computed_twist_msg);
+        }
     }
 
     void PathTracker::clampTwist(const geometry_msgs::msg::Twist& msg)
@@ -176,13 +206,20 @@ namespace path_tracker {
     bool PathTracker::isTargetReached(const geometry_msgs::msg::Pose& current_pose,
                                       const geometry_msgs::msg::Pose& target_pose)
     {
+        RCLCPP_INFO_STREAM(
+        this->get_logger(),
+        "target: "
+        << PathMath::normalizePi(PathMath::quaternionToEulerRad(target_pose).at(2)) << "|"
+        << "current: "
+        << PathMath::normalizePi(PathMath::quaternionToEulerRad(current_pose).at(2)));
         return isWithinTolerance(target_pose.position.x, current_pose.position.x,
                                  tracker_target_tolerance_.linear_x) &&
                isWithinTolerance(target_pose.position.y, current_pose.position.y,
                                  tracker_target_tolerance_.linear_y) &&
-               isWithinTolerance(target_rpy_.at(2),
-                                 PathMath::quaternionToEulerRad(current_pose).at(2),
-                                 tracker_target_tolerance_.angular_z);
+               isWithinTolerance(
+               PathMath::normalizePi(PathMath::quaternionToEulerRad(target_pose).at(2)),
+               PathMath::normalizePi(PathMath::quaternionToEulerRad(current_pose).at(2)),
+               tracker_target_tolerance_.angular_z);
     }
 
     template <typename T>
@@ -199,8 +236,13 @@ namespace path_tracker {
     {
         if (current_path_queue_.size() && tracker_status_ == TrackerStatus::RUNNING) {
             current_path_queue_.pop();
-            target_pose_ = current_path_queue_.front();
-            printPose(target_pose_, "target_pose");
+            if (current_path_queue_.empty()) {
+                RCLCPP_INFO_STREAM(this->get_logger(), "Done with path tracking!");
+            }
+            else {
+                target_pose_ = current_path_queue_.front();
+                printPose(target_pose_, "target_pose");
+            }
         }
         else {
             tracker_status_ = TrackerStatus::COMPLETED;

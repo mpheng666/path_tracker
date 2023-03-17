@@ -77,14 +77,14 @@ Visualization Manager:
       Length: 1
       Name: Axes
       Radius: 0.10000000149011612
-      Reference Frame: <Fixed Frame>
+      Reference Frame: odom
       Value: true
     - Class: rviz_default_plugins/Axes
       Enabled: true
       Length: 1
       Name: Axes
       Radius: 0.10000000149011612
-      Reference Frame: base_link
+      Reference Frame: base_footprint
       Value: true
   Enabled: true
   Global Options:
@@ -129,7 +129,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 43.21693801879883
+      Distance: 17.871278762817383
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -163,5 +163,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1080
-  X: 1717
+  X: 1920
   Y: 1080

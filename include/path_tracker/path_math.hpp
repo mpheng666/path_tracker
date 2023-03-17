@@ -29,18 +29,18 @@ namespace path_tracker {
         {
             tf2::Quaternion q;
             q.setRPY(rpy.at(0), rpy.at(1), rpy.at(2));
+            q.normalize();
             return q;
         }
 
-        static double degToRad(double val)
+        static double normalizePi(double val)
         {
-            return (val / 180.0) * M_PI;
+           return atan2(sin(val), cos(val));
         }
 
-        static double radToDeg(double val)
-        {
-            return (val / M_PI) * 180.0;
-        }
+        static double degToRad(double val) { return (val / 180.0) * M_PI; }
+
+        static double radToDeg(double val) { return (val / M_PI) * 180.0; }
     };
 } // namespace path_tracker
 
