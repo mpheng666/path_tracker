@@ -35,6 +35,12 @@ def generate_launch_description():
     'path.yaml'
     )
 
+    tracker_param = os.path.join(
+    get_package_share_directory('path_tracker'),
+    'config',
+    'tracker.yaml'
+    )
+
     rviz_file = get_package_file('path_tracker', 'rviz/path_viz.rviz')
 
     return launch.LaunchDescription([
@@ -44,17 +50,16 @@ def generate_launch_description():
             executable='path_tracker_node',
             output='screen',
             namespace='cfr',
-            parameters = [waypoints],
-            # remappings=[('odom', '/odom')]
-                        remappings=[('path_tracker/cmd_vel', '/cfr/cfr_mpc/cmd_vel'), ('odom', '/odom')]
+            parameters = [waypoints, tracker_param],
+            remappings=[('path_tracker/cmd_vel', '/cfr/cfr_mpc/cmd_vel'), ('odom', '/odom')]
         ),
-        launch_ros.actions.Node(
-            name='rviz',
-            package='rviz2',
-            executable='rviz2',
-            # output='screen',
-            arguments=[
-                '-d', rviz_file
-            ]
-        )
+        # launch_ros.actions.Node(
+        #     name='rviz',
+        #     package='rviz2',
+        #     executable='rviz2',
+        #     # output='screen',
+        #     arguments=[
+        #         '-d', rviz_file
+        #     ]
+        # )
     ])

@@ -9,6 +9,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "std_msgs/msg/int32.hpp"
+#include "std_msgs/msg/float64.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -20,9 +21,9 @@
 
 namespace path_tracker {
     struct TrackerParam {
-        double linear_x_P{0.2};
-        double linear_y_P{0.2};
-        double angular_z_P{0.2};
+        double linear_x_P{0.6};
+        double linear_y_P{0.6};
+        double angular_z_P{0.6};
     };
 
     struct TrackerTwistLimit {
@@ -65,12 +66,14 @@ namespace path_tracker {
         rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr status_pub_;
         rclcpp::TimerBase::SharedPtr status_pub_timer_;
         rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr status_event_sub_;
+        rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr blade_rpm_pub_;
 
         geometry_msgs::msg::Pose target_pose_;
         RPY_T target_rpy_;
 
         nav_msgs::msg::Path current_target_path_;
         std::queue<geometry_msgs::msg::Pose> current_path_queue_;
+        std::vector<std::vector<float>> loaded_points_;
 
         TrackerParam tracker_param_;
         TrackerTwistLimit tracker_twist_limit_;
@@ -80,6 +83,11 @@ namespace path_tracker {
         static constexpr uint32_t watchdog_timeout_ns_{500'000};
         uint32_t odom_last_stamped_{0};
 
+        geometry_msgs::msg::Pose initial_pose_;
+
+        bool is_pose_initialised_ {false};
+
+        void loadParams();
         void loadPath();
         void initPath();
         void start();
@@ -98,6 +106,8 @@ namespace path_tracker {
         void statusEventCb(const std_msgs::msg::Int32::SharedPtr msg);
 
         void printPose(const geometry_msgs::msg::Pose& pose, const std::string& name);
+
+        void reloadPathBasedOnOdom();
     };
 } // namespace path_tracker
 
