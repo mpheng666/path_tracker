@@ -23,7 +23,8 @@ namespace path_tracker {
           "tracker_command",
           10,
           std::bind(&PathTracker::statusEventCb, this, std::placeholders::_1)))
-        , blade_rpm_pub_(this->create_publisher<std_msgs::msg::Int32>("/cfr/auto_client/blade_speed", 10))
+        , blade_rpm_pub_(this->create_publisher<std_msgs::msg::Int32>(
+          "/cfr/auto_client/blade_speed", 10))
     {
         loadParams();
         loadPath();
@@ -38,7 +39,8 @@ namespace path_tracker {
         tracker_status_ = TrackerStatus::RUNNING;
     }
 
-    void PathTracker::loadParams(){
+    void PathTracker::loadParams()
+    {
         this->declare_parameter("tracker_param.linear_x_P");
         this->declare_parameter("tracker_param.linear_y_P");
         this->declare_parameter("tracker_param.angular_z_P");
@@ -58,16 +60,25 @@ namespace path_tracker {
         this->get_parameter("tracker_param.linear_y_P", tracker_param_.linear_y_P);
         this->get_parameter("tracker_param.angular_z_P", tracker_param_.angular_z_P);
 
-        this->get_parameter("tracker_twist_limit.max_linear_x", tracker_twist_limit_.max_linear_x );
-        this->get_parameter("tracker_twist_limit.max_linear_y", tracker_twist_limit_.max_linear_y );
-        this->get_parameter("tracker_twist_limit.max_angular_z", tracker_twist_limit_.max_angular_z );
-        this->get_parameter("tracker_twist_limit.min_linear_x", tracker_twist_limit_.min_linear_x );
-        this->get_parameter("tracker_twist_limit.min_linear_y", tracker_twist_limit_.min_linear_y );
-        this->get_parameter("tracker_twist_limit.min_angular_z", tracker_twist_limit_.min_angular_z );
+        this->get_parameter("tracker_twist_limit.max_linear_x",
+                            tracker_twist_limit_.max_linear_x);
+        this->get_parameter("tracker_twist_limit.max_linear_y",
+                            tracker_twist_limit_.max_linear_y);
+        this->get_parameter("tracker_twist_limit.max_angular_z",
+                            tracker_twist_limit_.max_angular_z);
+        this->get_parameter("tracker_twist_limit.min_linear_x",
+                            tracker_twist_limit_.min_linear_x);
+        this->get_parameter("tracker_twist_limit.min_linear_y",
+                            tracker_twist_limit_.min_linear_y);
+        this->get_parameter("tracker_twist_limit.min_angular_z",
+                            tracker_twist_limit_.min_angular_z);
 
-        this->get_parameter("tracker_target_tolerance.linear_x", tracker_target_tolerance_.linear_x );
-        this->get_parameter("tracker_target_tolerance.linear_y", tracker_target_tolerance_.linear_y );
-        this->get_parameter("tracker_target_tolerance.angular_z", tracker_target_tolerance_.angular_z );
+        this->get_parameter("tracker_target_tolerance.linear_x",
+                            tracker_target_tolerance_.linear_x);
+        this->get_parameter("tracker_target_tolerance.linear_y",
+                            tracker_target_tolerance_.linear_y);
+        this->get_parameter("tracker_target_tolerance.angular_z",
+                            tracker_target_tolerance_.angular_z);
     }
 
     void PathTracker::loadPath()
@@ -148,8 +159,7 @@ namespace path_tracker {
 
     void PathTracker::odomCb(const nav_msgs::msg::Odometry::SharedPtr msg)
     {
-        if(!is_pose_initialised_)
-        {
+        if (!is_pose_initialised_) {
             initial_pose_ = msg->pose.pose;
             reloadPathBasedOnOdom();
             printPose(initial_pose_, "initial_pose");
@@ -158,7 +168,7 @@ namespace path_tracker {
         odom_last_stamped_ = msg->header.stamp.nanosec;
         path_pub_->publish(current_target_path_);
         if (tracker_status_ == TrackerStatus::RUNNING) {
-        computeTwist(msg->pose.pose);
+            computeTwist(msg->pose.pose);
         }
     }
 
@@ -250,7 +260,8 @@ namespace path_tracker {
         // RCLCPP_INFO_STREAM(
         // this->get_logger(),
         // "target: "
-        // << PathMath::normalizePi(PathMath::quaternionToEulerRad(target_pose).at(2)) << "|"
+        // << PathMath::normalizePi(PathMath::quaternionToEulerRad(target_pose).at(2)) <<
+        // "|"
         // << "current: "
         // << PathMath::normalizePi(PathMath::quaternionToEulerRad(current_pose).at(2)));
         return isWithinTolerance(target_pose.position.x, current_pose.position.x,
@@ -276,7 +287,7 @@ namespace path_tracker {
     void PathTracker::updateNextPose()
     {
         if (current_path_queue_.size() && tracker_status_ == TrackerStatus::RUNNING) {
-            
+
             current_path_queue_.pop();
             if (current_path_queue_.empty()) {
                 std_msgs::msg::Int32 blade_rpm_msg;
@@ -336,8 +347,7 @@ namespace path_tracker {
 
     void PathTracker::reloadPathBasedOnOdom()
     {
-        while(!current_path_queue_.empty())
-        {
+        while (!current_path_queue_.empty()) {
             current_path_queue_.pop();
         }
         current_target_path_.poses.clear();
@@ -345,8 +355,11 @@ namespace path_tracker {
             geometry_msgs::msg::PoseStamped pose;
             pose.pose.position.x = p.at(0) + initial_pose_.position.x;
             pose.pose.position.y = p.at(1) + initial_pose_.position.y;
-            double initial_theta = p.at(2) + PathMath::radToDeg(PathMath::quaternionToEulerRad(initial_pose_).at(2));
-            auto q = PathMath::EulerToQuaternion({0, 0, PathMath::degToRad(initial_theta)});
+            double initial_theta =
+            p.at(2) +
+            PathMath::radToDeg(PathMath::quaternionToEulerRad(initial_pose_).at(2));
+            auto q =
+            PathMath::EulerToQuaternion({0, 0, PathMath::degToRad(initial_theta)});
             pose.pose.orientation.x = q.getX();
             pose.pose.orientation.y = q.getY();
             pose.pose.orientation.z = q.getZ();
@@ -358,6 +371,5 @@ namespace path_tracker {
         }
         start();
     }
-
 
 } // namespace path_tracker

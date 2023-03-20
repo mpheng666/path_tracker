@@ -69,8 +69,7 @@ namespace path_tracker {
         rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr blade_rpm_pub_;
 
         geometry_msgs::msg::Pose target_pose_;
-        RPY_T target_rpy_;
-
+        
         nav_msgs::msg::Path current_target_path_;
         std::queue<geometry_msgs::msg::Pose> current_path_queue_;
         std::vector<std::vector<float>> loaded_points_;
