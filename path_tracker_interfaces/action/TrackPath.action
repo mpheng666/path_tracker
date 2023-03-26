@@ -1,5 +1,8 @@
 nav_msgs/Path target_path
 ---
-int32 tracking_reuslt
+int32 tracking_result
+int32 TRACKING_SUCCESS = 1
+int32 TRACKING_ERROR = 2
+int32 TRACKING_CANCELED = 3
 ---
 nav_msgs/Path completed_waypoints
