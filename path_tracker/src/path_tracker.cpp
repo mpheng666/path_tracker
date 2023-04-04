@@ -264,9 +264,9 @@ namespace path_tracker {
             cumulative_I_errors_.linear_y * tracker_param_.linear_x_I;
         }
         computed_twist_msg.angular.z =
-        current_errors.linear_y * tracker_param_.angular_z_P;
+        current_errors.angular_z * tracker_param_.angular_z_P;
         computed_twist_msg.angular.z +=
-        (current_errors.linear_y - previous_errors_.angular_z) *
+        (current_errors.angular_z - previous_errors_.angular_z) *
         tracker_param_.angular_z_D;
         computed_twist_msg.angular.z +=
         cumulative_I_errors_.angular_z * tracker_param_.angular_z_I;
