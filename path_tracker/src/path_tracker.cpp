@@ -44,6 +44,12 @@ namespace path_tracker {
         this->declare_parameter("tracker_param.linear_x_P");
         this->declare_parameter("tracker_param.linear_y_P");
         this->declare_parameter("tracker_param.angular_z_P");
+        this->declare_parameter("tracker_param.linear_x_I");
+        this->declare_parameter("tracker_param.linear_y_I");
+        this->declare_parameter("tracker_param.angular_z_I");
+        this->declare_parameter("tracker_param.linear_x_D");
+        this->declare_parameter("tracker_param.linear_y_D");
+        this->declare_parameter("tracker_param.angular_z_D");
 
         this->declare_parameter("tracker_twist_limit.max_linear_x");
         this->declare_parameter("tracker_twist_limit.max_linear_y");
@@ -59,6 +65,12 @@ namespace path_tracker {
         this->get_parameter("tracker_param.linear_x_P", tracker_param_.linear_x_P);
         this->get_parameter("tracker_param.linear_y_P", tracker_param_.linear_y_P);
         this->get_parameter("tracker_param.angular_z_P", tracker_param_.angular_z_P);
+        this->get_parameter("tracker_param.linear_x_I", tracker_param_.linear_x_I);
+        this->get_parameter("tracker_param.linear_y_I", tracker_param_.linear_y_I);
+        this->get_parameter("tracker_param.angular_z_I", tracker_param_.angular_z_I);
+        this->get_parameter("tracker_param.linear_x_D", tracker_param_.linear_x_D);
+        this->get_parameter("tracker_param.linear_y_D", tracker_param_.linear_y_D);
+        this->get_parameter("tracker_param.angular_z_D", tracker_param_.angular_z_D);
 
         this->get_parameter("tracker_twist_limit.max_linear_x",
                             tracker_twist_limit_.max_linear_x);
@@ -110,9 +122,9 @@ namespace path_tracker {
         this->get_parameter("waypoints.path_L", path_L);
         this->get_parameter("waypoints.use_id", use_id);
 
-        std::vector<std::string> waypoints{{path_complex},     {path_forward_backward},
-                                           {path_left_right},  {path_s},
-                                           {path_s_alternate}, {path_45_deg}, {path_L}};
+        std::vector<std::string> waypoints{
+        {path_complex},     {path_forward_backward}, {path_left_right}, {path_s},
+        {path_s_alternate}, {path_45_deg},           {path_L}};
 
         std::string chosen_waypoints = path_s;
         try {
@@ -152,7 +164,6 @@ namespace path_tracker {
 
     void PathTracker::initPath()
     {
-        // current_target_path_ = PathGenerator::getCircularline(10, 0.6, 0.0);
         current_target_path_ = PathGenerator::getStraightline(10, 1.0, 0.0);
         for (const auto& p : current_target_path_.poses) {
             printPose(p.pose, "path_pose");
@@ -173,8 +184,7 @@ namespace path_tracker {
         if (tracker_status_ == TrackerStatus::RUNNING) {
             computeTwist(msg->pose.pose);
         }
-        else if(tracker_status_ == TrackerStatus::COMPLETED)
-        {
+        else if (tracker_status_ == TrackerStatus::COMPLETED) {
             geometry_msgs::msg::Twist target_twist_msg;
             twist_pub_->publish(target_twist_msg);
         }
@@ -197,14 +207,14 @@ namespace path_tracker {
 
     void PathTracker::WatchDogTwistZeroPubCb()
     {
-        // if (odom_last_stamped_ - this->now().nanoseconds() >= watchdog_timeout_ns_) {
-        //     twist_pub_->publish(geometry_msgs::msg::Twist());
-        //     RCLCPP_WARN_STREAM(this->get_logger(), "No odom feedback!");
-        //     tracker_status_ = TrackerStatus::ERRORED;
-        // }
-        // else {
-        //     tracker_status_ = TrackerStatus::IDLE;
-        // }
+        if (odom_last_stamped_ - this->now().nanoseconds() >= watchdog_timeout_ns_) {
+            twist_pub_->publish(geometry_msgs::msg::Twist());
+            RCLCPP_WARN_STREAM(this->get_logger(), "No odom feedback!");
+            tracker_status_ = TrackerStatus::ERRORED;
+        }
+        else {
+            tracker_status_ = TrackerStatus::RUNNING;
+        }
     }
 
     void PathTracker::computeTwist(const geometry_msgs::msg::Pose& current_pose)
@@ -217,12 +227,13 @@ namespace path_tracker {
         }
 
         auto current_rpy = PathMath::quaternionToEulerRad(current_pose);
-
-        double x_error = target_pose_.position.x - current_pose.position.x;
-        double y_error = target_pose_.position.y - current_pose.position.y;
         auto target_theta =
         PathMath::normalizePi(PathMath::quaternionToEulerRad(target_pose_).at(2));
-        double yaw_error = target_theta - current_rpy.at(2);
+
+        TrackerErrors current_errors;
+        current_errors.linear_x = target_pose_.position.x - current_pose.position.x;
+        current_errors.linear_y = target_pose_.position.y - current_pose.position.y;
+        current_errors.angular_z = target_theta - current_rpy.at(2);
         // RCLCPP_INFO_STREAM(this->get_logger(),
         //                    "x_error: " << x_error << " = " << target_pose_.position.x
         //                                << " - " << current_pose.position.x);
@@ -235,10 +246,35 @@ namespace path_tracker {
 
         if (isWithinTolerance(target_theta, current_rpy.at(2),
                               tracker_target_tolerance_.angular_z)) {
-            computed_twist_msg.linear.x = x_error * tracker_param_.linear_x_P;
-            computed_twist_msg.linear.y = y_error * tracker_param_.linear_y_P;
+            computed_twist_msg.linear.x =
+            current_errors.linear_x * tracker_param_.linear_x_P;
+            computed_twist_msg.linear.y =
+            current_errors.linear_y * tracker_param_.linear_y_P;
+
+            computed_twist_msg.linear.x +=
+            (current_errors.linear_x - previous_errors_.linear_x) *
+            tracker_param_.linear_x_D;
+            computed_twist_msg.linear.y +=
+            (current_errors.linear_y - previous_errors_.linear_y) *
+            tracker_param_.linear_y_D;
+
+            computed_twist_msg.linear.x +=
+            cumulative_I_errors_.linear_x * tracker_param_.linear_x_I;
+            computed_twist_msg.linear.y +=
+            cumulative_I_errors_.linear_y * tracker_param_.linear_x_I;
         }
-        computed_twist_msg.angular.z = yaw_error * tracker_param_.angular_z_P;
+        computed_twist_msg.angular.z =
+        current_errors.linear_y * tracker_param_.angular_z_P;
+        computed_twist_msg.angular.z +=
+        (current_errors.linear_y - previous_errors_.angular_z) *
+        tracker_param_.angular_z_D;
+        computed_twist_msg.angular.z +=
+        cumulative_I_errors_.angular_z * tracker_param_.angular_z_I;
+
+        previous_errors_ = current_errors;
+        cumulative_I_errors_.linear_x += 0.9 * (current_errors.linear_x);
+        cumulative_I_errors_.linear_y += 0.9 * (current_errors.linear_y);
+        cumulative_I_errors_.angular_z += 0.9 * (current_errors.angular_z);
 
         if (!std::isnan(computed_twist_msg.angular.z)) {
             clampTwist(computed_twist_msg);

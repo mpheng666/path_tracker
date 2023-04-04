@@ -1,15 +1,15 @@
 #ifndef PATH_TRACKER_PATH_TRACKER_HPP_
 #define PATH_TRACKER_PATH_TRACKER_HPP_
 
+#include "path_tracker/array_parser.hpp"
 #include "path_tracker/path_generator.hpp"
 #include "path_tracker/path_math.hpp"
-#include "path_tracker/array_parser.hpp"
 
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "nav_msgs/msg/path.hpp"
-#include "std_msgs/msg/int32.hpp"
 #include "std_msgs/msg/float64.hpp"
+#include "std_msgs/msg/int32.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -24,6 +24,12 @@ namespace path_tracker {
         double linear_x_P{0.6};
         double linear_y_P{0.6};
         double angular_z_P{0.6};
+        double linear_x_I{0.0};
+        double linear_y_I{0.0};
+        double angular_z_I{0.0};
+        double linear_x_D{0.0};
+        double linear_y_D{0.0};
+        double angular_z_D{0.0};
     };
 
     struct TrackerTwistLimit {
@@ -41,6 +47,12 @@ namespace path_tracker {
         double angular_z{0.3};
     };
 
+    struct TrackerErrors {
+        double linear_x{0.0};
+        double linear_y{0.0};
+        double angular_z{0.0};
+    };
+
     enum class TrackerStatus : int {
         IDLE = 0,
         RUNNING = 1,
@@ -51,7 +63,6 @@ namespace path_tracker {
     };
 
     enum class TrackerEvent : int { START = 0, STOP = 1, PAUSE = 2 };
-
 
     class PathTracker : public rclcpp::Node {
     public:
@@ -69,7 +80,7 @@ namespace path_tracker {
         rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr blade_rpm_pub_;
 
         geometry_msgs::msg::Pose target_pose_;
-        
+
         nav_msgs::msg::Path current_target_path_;
         std::queue<geometry_msgs::msg::Pose> current_path_queue_;
         std::vector<std::vector<float>> loaded_points_;
@@ -83,8 +94,9 @@ namespace path_tracker {
         uint32_t odom_last_stamped_{0};
 
         geometry_msgs::msg::Pose initial_pose_;
-
-        bool is_pose_initialised_ {false};
+        bool is_pose_initialised_{false};
+        TrackerErrors previous_errors_;
+        TrackerErrors cumulative_I_errors_;
 
         void loadParams();
         void loadPath();
