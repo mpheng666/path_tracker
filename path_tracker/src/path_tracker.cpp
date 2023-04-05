@@ -230,10 +230,16 @@ namespace path_tracker {
         auto target_theta =
         PathMath::normalizePi(PathMath::quaternionToEulerRad(target_pose_).at(2));
 
+        TrackerErrors current_errors_global;
+        current_errors_global.linear_x = target_pose_.position.x - current_pose.position.x;
+        current_errors_global.linear_y = target_pose_.position.y - current_pose.position.y;
+        current_errors_global.angular_z = target_theta - current_rpy.at(2);
+
         TrackerErrors current_errors;
-        current_errors.linear_x = target_pose_.position.x - current_pose.position.x;
-        current_errors.linear_y = target_pose_.position.y - current_pose.position.y;
-        current_errors.angular_z = target_theta - current_rpy.at(2);
+        current_errors.linear_x = current_errors_global.linear_x * cos(current_rpy.at(2)) + current_errors_global.linear_y * sin(current_rpy.at(2)); 
+        current_errors.linear_y = current_errors_global.linear_y * cos(current_rpy.at(2)) - current_errors_global.linear_x * sin(current_rpy.at(2));
+        current_errors.angular_z = current_errors_global.angular_z;
+
         // RCLCPP_INFO_STREAM(this->get_logger(),
         //                    "x_error: " << x_error << " = " << target_pose_.position.x
         //                                << " - " << current_pose.position.x);
@@ -265,9 +271,11 @@ namespace path_tracker {
         }
         computed_twist_msg.angular.z =
         current_errors.angular_z * tracker_param_.angular_z_P;
+        
         computed_twist_msg.angular.z +=
         (current_errors.angular_z - previous_errors_.angular_z) *
         tracker_param_.angular_z_D;
+
         computed_twist_msg.angular.z +=
         cumulative_I_errors_.angular_z * tracker_param_.angular_z_I;
 
