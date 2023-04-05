@@ -50,6 +50,7 @@ namespace path_tracker {
         this->declare_parameter("tracker_param.linear_x_D");
         this->declare_parameter("tracker_param.linear_y_D");
         this->declare_parameter("tracker_param.angular_z_D");
+        this->declare_parameter("tracker_behaviour.align_heading_first");
 
         this->declare_parameter("tracker_twist_limit.max_linear_x");
         this->declare_parameter("tracker_twist_limit.max_linear_y");
@@ -91,6 +92,8 @@ namespace path_tracker {
                             tracker_target_tolerance_.linear_y);
         this->get_parameter("tracker_target_tolerance.angular_z",
                             tracker_target_tolerance_.angular_z);
+        this->get_parameter("tracker_behaviour.align_heading_first",
+                            use_align_heading_first_);
     }
 
     void PathTracker::loadPath()
@@ -175,7 +178,7 @@ namespace path_tracker {
     {
         if (!is_pose_initialised_) {
             initial_pose_ = msg->pose.pose;
-            reloadPathBasedOnOdom();
+            // reloadPathBasedOnOdom();
             printPose(initial_pose_, "initial_pose");
             is_pose_initialised_ = true;
         }
@@ -224,6 +227,9 @@ namespace path_tracker {
         bool res = isTargetReached(current_pose, target_pose_);
         if (res) {
             updateNextPose();
+            // previous_errors_.linear_x = 0.0;
+            // previous_errors_.linear_y = 0.0;
+            // previous_errors_.angular_z = 0.0;
         }
 
         auto current_rpy = PathMath::quaternionToEulerRad(current_pose);
@@ -231,27 +237,34 @@ namespace path_tracker {
         PathMath::normalizePi(PathMath::quaternionToEulerRad(target_pose_).at(2));
 
         TrackerErrors current_errors_global;
-        current_errors_global.linear_x = target_pose_.position.x - current_pose.position.x;
-        current_errors_global.linear_y = target_pose_.position.y - current_pose.position.y;
+        current_errors_global.linear_x =
+        target_pose_.position.x - current_pose.position.x;
+        current_errors_global.linear_y =
+        target_pose_.position.y - current_pose.position.y;
         current_errors_global.angular_z = target_theta - current_rpy.at(2);
 
         TrackerErrors current_errors;
-        current_errors.linear_x = current_errors_global.linear_x * cos(current_rpy.at(2)) + current_errors_global.linear_y * sin(current_rpy.at(2)); 
-        current_errors.linear_y = current_errors_global.linear_y * cos(current_rpy.at(2)) - current_errors_global.linear_x * sin(current_rpy.at(2));
+        current_errors.linear_x =
+        current_errors_global.linear_x * cos(current_rpy.at(2)) +
+        current_errors_global.linear_y * sin(current_rpy.at(2));
+        current_errors.linear_y =
+        current_errors_global.linear_y * cos(current_rpy.at(2)) -
+        current_errors_global.linear_x * sin(current_rpy.at(2));
         current_errors.angular_z = current_errors_global.angular_z;
 
-        // RCLCPP_INFO_STREAM(this->get_logger(),
-        //                    "x_error: " << x_error << " = " << target_pose_.position.x
-        //                                << " - " << current_pose.position.x);
-        // RCLCPP_INFO_STREAM(this->get_logger(),
-        //                    "y_error: " << y_error << " = " << target_pose_.position.y
-        //                                << " - " << current_pose.position.y);
-        // RCLCPP_INFO_STREAM(this->get_logger(), "yaw_error: " << yaw_error << " = "
-        //                                                      << target_theta << " - "
-        //                                                      << current_rpy.at(2));
+        RCLCPP_INFO_STREAM(this->get_logger(),
+                           "x_error: " << current_errors_global.linear_x << " = " << target_pose_.position.x
+                                       << " - " << current_pose.position.x);
+        RCLCPP_INFO_STREAM(this->get_logger(),
+                           "y_error: " << current_errors_global.linear_y << " = " << target_pose_.position.y
+                                       << " - " << current_pose.position.y);
+        RCLCPP_INFO_STREAM(this->get_logger(), "yaw_error: " << current_errors_global.angular_z << " = "
+                                                             << target_theta << " - "
+                                                             << current_rpy.at(2));
 
         if (isWithinTolerance(target_theta, current_rpy.at(2),
-                              tracker_target_tolerance_.angular_z)) {
+                              tracker_target_tolerance_.angular_z) || !use_align_heading_first_) 
+        {
             computed_twist_msg.linear.x =
             current_errors.linear_x * tracker_param_.linear_x_P;
             computed_twist_msg.linear.y =
@@ -271,7 +284,7 @@ namespace path_tracker {
         }
         computed_twist_msg.angular.z =
         current_errors.angular_z * tracker_param_.angular_z_P;
-        
+
         computed_twist_msg.angular.z +=
         (current_errors.angular_z - previous_errors_.angular_z) *
         tracker_param_.angular_z_D;
@@ -280,9 +293,12 @@ namespace path_tracker {
         cumulative_I_errors_.angular_z * tracker_param_.angular_z_I;
 
         previous_errors_ = current_errors;
-        cumulative_I_errors_.linear_x = cumulative_I_errors_.linear_x * 0.9 + (current_errors.linear_x);
-        cumulative_I_errors_.linear_y = cumulative_I_errors_.linear_y * 0.9 + (current_errors.linear_y);
-        cumulative_I_errors_.angular_z = cumulative_I_errors_.angular_z * 0.9 + (current_errors.angular_z);
+        cumulative_I_errors_.linear_x =
+        cumulative_I_errors_.linear_x * 0.9 + (current_errors.linear_x);
+        cumulative_I_errors_.linear_y =
+        cumulative_I_errors_.linear_y * 0.9 + (current_errors.linear_y);
+        cumulative_I_errors_.angular_z =
+        cumulative_I_errors_.angular_z * 0.9 + (current_errors.angular_z);
 
         if (!std::isnan(computed_twist_msg.angular.z)) {
             clampTwist(computed_twist_msg);

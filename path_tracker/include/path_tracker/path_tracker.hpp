@@ -98,6 +98,8 @@ namespace path_tracker {
         TrackerErrors previous_errors_;
         TrackerErrors cumulative_I_errors_;
 
+        bool use_align_heading_first_ {false};
+
         void loadParams();
         void loadPath();
         void initPath();

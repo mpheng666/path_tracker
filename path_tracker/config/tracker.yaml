@@ -2,25 +2,28 @@ cfr:
   path_tracker:
     ros__parameters:
       tracker_param:
-        linear_x_P: 0.5
-        linear_y_P: 0.5
-        angular_z_P: 0.5
-        linear_x_I: 0.0
-        linear_y_I: 0.0
-        angular_z_I: 0.0
-        linear_x_D: 0.0
-        linear_y_D: 0.0
-        angular_z_D: 0.0
+        linear_x_P: 0.3
+        linear_y_P: 0.3
+        angular_z_P: 0.6
+        linear_x_I: 0.1
+        linear_y_I: 0.2
+        angular_z_I: 0.4
+        linear_x_D: 0.1
+        linear_y_D: 0.1
+        angular_z_D: 0.05
 
       tracker_twist_limit:
-        max_linear_x: 1.0
-        max_linear_y: 1.0
-        max_angular_z: 0.5
-        min_linear_x: -1.0
-        min_linear_y: -1.0
-        min_angular_z: -0.5
+        max_linear_x: 0.8
+        max_linear_y: 0.8
+        max_angular_z: 0.6
+        min_linear_x: -0.8
+        min_linear_y: -0.8
+        min_angular_z: -0.6
 
       tracker_target_tolerance:
-        linear_x: 0.3
-        linear_y: 0.3
-        angular_z: 0.3
+        linear_x: 0.2
+        linear_y: 0.2
+        angular_z: 0.6
+
+      tracker_behaviour:
+        align_heading_first: false
