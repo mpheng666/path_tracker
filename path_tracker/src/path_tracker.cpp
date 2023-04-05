@@ -272,9 +272,9 @@ namespace path_tracker {
         cumulative_I_errors_.angular_z * tracker_param_.angular_z_I;
 
         previous_errors_ = current_errors;
-        cumulative_I_errors_.linear_x += 0.9 * (current_errors.linear_x);
-        cumulative_I_errors_.linear_y += 0.9 * (current_errors.linear_y);
-        cumulative_I_errors_.angular_z += 0.9 * (current_errors.angular_z);
+        cumulative_I_errors_.linear_x = cumulative_I_errors_.linear_x * 0.9 + (current_errors.linear_x);
+        cumulative_I_errors_.linear_y = cumulative_I_errors_.linear_y * 0.9 + (current_errors.linear_y);
+        cumulative_I_errors_.angular_z = cumulative_I_errors_.angular_z * 0.9 + (current_errors.angular_z);
 
         if (!std::isnan(computed_twist_msg.angular.z)) {
             clampTwist(computed_twist_msg);
