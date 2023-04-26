@@ -13,6 +13,7 @@ namespace path_tracker
 
         void init()
         {
+            // linear time-invariant system in state-space form
             state_current_ << 0.0, 0.0, 0.0;
             state_previous_ = state_current_;
             A_matrix_       = Eigen::Matrix3d::Identity();
@@ -32,7 +33,7 @@ namespace path_tracker
         static constexpr unsigned int CONTROL_NUM_ {3};
         Eigen::Matrix<double, STATE_NUM_, 1> state_current_;
         Eigen::Matrix<double, STATE_NUM_, 1> state_previous_;
-        Eigen::Matrix<double, STATE_NUM_, CONTROL_NUM_> A_matrix_;
+        Eigen::Matrix<double, STATE_NUM_, STATE_NUM_> A_matrix_;
         Eigen::Matrix<double, STATE_NUM_, CONTROL_NUM_> B_matrix_;
         Eigen::Matrix<double, CONTROL_NUM_, 1> input_matrix_;
 

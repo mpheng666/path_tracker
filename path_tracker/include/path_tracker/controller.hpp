@@ -3,17 +3,15 @@
 
 #include <geometry_msgs/msg/twist.hpp>
 
-namespace path_tracker 
+namespace path_tracker
 {
-
     class Controller
     {
         public:
-            Controller();
-            virtual ~Controller() {}
-            virtual geometry_msgs::msg::Twist computeTwist();
-
+        Controller()                                     = default;
+        virtual ~Controller()                            = default;
+        virtual geometry_msgs::msg::Twist computeTwist() = 0;
     };
-}
+}  // namespace path_tracker
 
 #endif

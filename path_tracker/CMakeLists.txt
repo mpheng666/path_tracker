@@ -21,6 +21,7 @@ find_package(nav_msgs REQUIRED)
 find_package(path_tracker_interfaces REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_components REQUIRED)
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 add_executable(path_tracker_node src/path_tracker_node.cpp src/path_tracker.cpp)
 target_include_directories(path_tracker_node PUBLIC
@@ -42,6 +43,13 @@ ament_target_dependencies(tracker_aserver
   "path_tracker_interfaces")
 rclcpp_components_register_node(tracker_aserver PLUGIN "path_tracker::TrackerActionServer" EXECUTABLE tracker_action_server)
 
+add_executable(state_space_model_node src/state_space_model.cpp)
+target_link_libraries(state_space_model_node Eigen3::Eigen)
+# target_include_directories(state_space_model_node PUBLIC
+#   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+#   $<INSTALL_INTERFACE:include>)
+# ament_target_dependencies(state_space_model_node "rclcpp" "std_msgs" "geometry_msgs" "nav_msgs")
+
 install(TARGETS
   tracker_aserver
     ARCHIVE DESTINATION lib
@@ -49,6 +57,9 @@ install(TARGETS
     RUNTIME DESTINATION bin)
 
 install(TARGETS path_tracker_node
+  DESTINATION lib/${PROJECT_NAME})
+
+install(TARGETS state_space_model_node
   DESTINATION lib/${PROJECT_NAME})
   
 install(DIRECTORY include launch config rviz

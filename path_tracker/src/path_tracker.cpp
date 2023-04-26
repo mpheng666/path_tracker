@@ -227,9 +227,6 @@ namespace path_tracker {
         bool res = isTargetReached(current_pose, target_pose_);
         if (res) {
             updateNextPose();
-            // previous_errors_.linear_x = 0.0;
-            // previous_errors_.linear_y = 0.0;
-            // previous_errors_.angular_z = 0.0;
         }
 
         auto current_rpy = PathMath::quaternionToEulerRad(current_pose);
