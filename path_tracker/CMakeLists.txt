@@ -50,6 +50,9 @@ target_link_libraries(state_space_model_node Eigen3::Eigen)
 #   $<INSTALL_INTERFACE:include>)
 # ament_target_dependencies(state_space_model_node "rclcpp" "std_msgs" "geometry_msgs" "nav_msgs")
 
+add_executable(lqr_node src/linear_quadratic_regulator.cpp)
+target_link_libraries(lqr_node Eigen3::Eigen)
+
 install(TARGETS
   tracker_aserver
     ARCHIVE DESTINATION lib
@@ -62,6 +65,9 @@ install(TARGETS path_tracker_node
 install(TARGETS state_space_model_node
   DESTINATION lib/${PROJECT_NAME})
   
+install(TARGETS lqr_node
+  DESTINATION lib/${PROJECT_NAME})
+
 install(DIRECTORY include launch config rviz
   DESTINATION share/${PROJECT_NAME}
 )
