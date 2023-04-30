@@ -43,14 +43,14 @@ ament_target_dependencies(tracker_aserver
   "path_tracker_interfaces")
 rclcpp_components_register_node(tracker_aserver PLUGIN "path_tracker::TrackerActionServer" EXECUTABLE tracker_action_server)
 
-add_executable(state_space_model_node src/state_space_model.cpp)
+add_executable(state_space_model_node src/robot_state_space_model.cpp)
 target_link_libraries(state_space_model_node Eigen3::Eigen)
 # target_include_directories(state_space_model_node PUBLIC
 #   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 #   $<INSTALL_INTERFACE:include>)
 # ament_target_dependencies(state_space_model_node "rclcpp" "std_msgs" "geometry_msgs" "nav_msgs")
 
-add_executable(lqr_node src/linear_quadratic_regulator.cpp)
+add_executable(lqr_node src/linear_quadratic_regulator_node.cpp)
 target_link_libraries(lqr_node Eigen3::Eigen)
 
 install(TARGETS
